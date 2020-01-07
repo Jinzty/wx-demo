@@ -54,38 +54,6 @@ public class WxController {
         return "index";
     }
 
-    @GetMapping("/login")
-    @ApiOperation("登录页跳转")
-    public void login(HttpSession session, HttpServletResponse response) throws IOException {
-        String appid = "wx9e83c88e7e5200dc";//这边需要wx开放平台注册网站应用而非公众平台
-        String uuid = RandomStringUtils.randomAlphanumeric(24);
-        String redirectUri = "https://72933770.ngrok.io/test/wx/login/home";
-        String state = DigestUtils.md5DigestAsHex((uuid + session.getId()).getBytes()).toLowerCase();
-        session.setAttribute("uuid", uuid);
-        logger.info("login sessionId:{} uuid:{}", session.getId(), uuid);
-        StringBuilder sb = new StringBuilder("https://open.weixin.qq.com/connect/qrconnect");
-        sb.append("?appid=").append(appid);
-        sb.append("&redirect_uri=").append(URLEncoder.encode(redirectUri, "utf-8"));
-        sb.append("&response_type=code&scope=").append("snsapi_login");
-        sb.append("&state=").append(state).append("#wechat_redirect");
-        response.sendRedirect(sb.toString());
-    }
-
-    @GetMapping("/login/home")
-    @ApiOperation("登录页回调")
-    public String loginHome(String state, String code, HttpSession session) {
-        String uuid = String.valueOf(session.getAttribute("uuid"));
-        Assert.notNull(uuid, "失效请重新登录");
-        String sign = DigestUtils.md5DigestAsHex((uuid + session.getId()).getBytes()).toLowerCase();
-        Assert.isTrue(Objects.equals(sign, state), "验签失败");
-        String OPENID = code;//消费code获取OPENID
-        String userId = OPENID;//根据OPENID获取关联userId
-        logger.info("loginHome sessionId:{} uuid:{}", session.getId(), uuid, userId);
-        //登录处理
-        return "login home";
-    }
-
-
     @GetMapping("/login/qrCode")
     @ApiOperation("登录授权二维码")
     public ResponseEntity<byte[]> loginQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height, HttpSession session)
@@ -173,15 +141,6 @@ public class WxController {
         return new ResponseEntity<>(getQRCodeImage(width, height, sb.toString()), headers, HttpStatus.CREATED);
     }
 
-    private byte[] getQRCodeImage(int width, int height, String url) throws WriterException, IOException {
-        QRCodeWriter qrCodeWriter = new QRCodeWriter();
-        BitMatrix bitMatrix = qrCodeWriter.encode(url, BarcodeFormat.QR_CODE, width, height);
-        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-        byte[] pngData = pngOutputStream.toByteArray();
-        return pngData;
-    }
-
     @GetMapping("/auth/callback/{uuid}")
     @ApiOperation("wx授权回调")
     public String authCallback(@PathVariable(value = "uuid") String uuid, String state, String code,
@@ -205,5 +164,14 @@ public class WxController {
     public String authBinding(HttpSession session) {
         logger.info("auth binding sessionId:{} userId:{} OPENID:{}", session.getId(), session.getAttribute("userId"), session.getAttribute("OPENID"));
         return "binding";
+    }
+
+    private byte[] getQRCodeImage(int width, int height, String url) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        BitMatrix bitMatrix = qrCodeWriter.encode(url, BarcodeFormat.QR_CODE, width, height);
+        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        byte[] pngData = pngOutputStream.toByteArray();
+        return pngData;
     }
 }
