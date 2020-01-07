@@ -57,9 +57,9 @@ public class WxController {
     @GetMapping("/login")
     @ApiOperation("登录页跳转")
     public void login(HttpSession session, HttpServletResponse response) throws IOException {
-        String appid = "wx9e83c88e7e5200dc";
+        String appid = "wx9e83c88e7e5200dc";//这边需要wx开放平台注册网站应用而非公众平台
         String uuid = RandomStringUtils.randomAlphanumeric(24);
-        String redirectUri = "https://72933770.ngrok.io/test/wx/home";
+        String redirectUri = "https://72933770.ngrok.io/test/wx/login/home";
         String state = DigestUtils.md5DigestAsHex((uuid + session.getId()).getBytes()).toLowerCase();
         session.setAttribute("uuid", uuid);
         logger.info("login sessionId:{} uuid:{}", session.getId(), uuid);
@@ -146,19 +146,6 @@ public class WxController {
             loadingCache.invalidate(key);
             return "no binding";
         }
-        loadingCache.put(key, "waiting");
-//        logger.info("login callback sessionId:{} key:{} userId:{}", session.getId(), key, userId);
-//        session.setAttribute("key", key);
-//        session.setAttribute("userId", userId);
-//        return "hi, man";
-////        response.sendRedirect("/login/commit");
-//    }
-//    @GetMapping("/login/commit")
-//    @ApiOperation("wx登录提交")
-//    public String loginCommit(HttpSession session) {
-//        String key = String.valueOf(session.getAttribute("key"));
-//        String userId = String.valueOf(session.getAttribute("userId"));
-//        logger.info("login commit sessionId:{} key:{} userId:{}", session.getId(), key, userId);
         loadingCache.put(key, "commit");
         loadingCache.put(String.format("commit_%s", key), userId);
         return "login callback";
