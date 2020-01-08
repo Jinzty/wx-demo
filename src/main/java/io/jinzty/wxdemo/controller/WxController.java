@@ -28,6 +28,9 @@ import java.net.URLEncoder;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * wx接口
+ */
 @RestController
 @RequestMapping("/wx")
 @Api("wx接口")
@@ -49,15 +52,20 @@ public class WxController {
                 logger.info("", "", notification.getKey() + " " + notification.getValue() + " 被移除,原因:" + notification.getCause());
             }).build();
 
-    @GetMapping("/")
-    public String index() {
-        return "index";
-    }
-
+    /**
+     * 登录授权二维码
+     *
+     * @param width
+     * @param height
+     * @param session
+     * @return
+     * @throws WriterException
+     * @throws IOException
+     */
     @GetMapping("/login/qrCode")
     @ApiOperation("登录授权二维码")
-    public ResponseEntity<byte[]> loginQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height, HttpSession session)
-            throws WriterException, IOException {
+    public ResponseEntity<byte[]> loginQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height,
+                                              HttpSession session) throws WriterException, IOException {
         String appid = "wx9e83c88e7e5200dc";
         String scope = "snsapi_userinfo";//"snsapi_base";
         String uuid = RandomStringUtils.randomAlphanumeric(24);
@@ -78,9 +86,16 @@ public class WxController {
         return new ResponseEntity<>(getQRCodeImage(width, height, sb.toString()), headers, HttpStatus.CREATED);
     }
 
+    /**
+     * 登录轮询
+     *
+     * @param session
+     * @return
+     * @throws IOException
+     */
     @GetMapping("/login/check")
     @ApiOperation("登录轮询")
-    public String loginCheck(HttpSession session) throws IOException {
+    public String loginCheck(HttpSession session) {
         String key = String.valueOf(session.getAttribute("key"));
         if (key == null) {
             return "don't check";
@@ -99,9 +114,17 @@ public class WxController {
         return "login";
     }
 
+    /**
+     * wx登录回调
+     *
+     * @param uuid
+     * @param state
+     * @param code
+     * @return
+     */
     @GetMapping("/login/callback/{uuid}")
     @ApiOperation("wx登录回调")
-    public String loginCallback(@PathVariable(value = "uuid") String uuid, String state, String code){
+    public String loginCallback(@PathVariable(value = "uuid") String uuid, String state, String code) {
         String key = String.format("loginState_%s", uuid);
         String sessionState = loadingCache.getIfPresent(key);
         Assert.notNull(sessionState, "失效请刷新二维码重试");
@@ -120,6 +143,15 @@ public class WxController {
     }
 
 
+    /**
+     * user授权二维码
+     *
+     * @param width
+     * @param height
+     * @return
+     * @throws WriterException
+     * @throws IOException
+     */
     @GetMapping("/auth/qrCode")
     @ApiOperation("user授权二维码")
     public ResponseEntity<byte[]> authQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height)
@@ -141,6 +173,17 @@ public class WxController {
         return new ResponseEntity<>(getQRCodeImage(width, height, sb.toString()), headers, HttpStatus.CREATED);
     }
 
+    /**
+     * wx授权回调
+     *
+     * @param uuid
+     * @param state
+     * @param code
+     * @param session
+     * @param response
+     * @return
+     * @throws IOException
+     */
     @GetMapping("/auth/callback/{uuid}")
     @ApiOperation("wx授权回调")
     public String authCallback(@PathVariable(value = "uuid") String uuid, String state, String code,
@@ -159,6 +202,12 @@ public class WxController {
 //        response.sendRedirect("/auth/binding");
     }
 
+    /**
+     * wx绑定
+     *
+     * @param session
+     * @return
+     */
     @GetMapping("/auth/binding")
     @ApiOperation("wx绑定")
     public String authBinding(HttpSession session) {
