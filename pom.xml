@@ -15,6 +15,7 @@
 	<description>Demo project for Spring Boot</description>
 
 	<properties>
+		<profile.id>local</profile.id>
 		<java.version>1.8</java.version>
 		<springfox-swagger.version>2.9.2</springfox-swagger.version>
 		<guava.version>23.0</guava.version>
@@ -103,10 +104,86 @@
 	<build>
 		<plugins>
 			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>${project.basedir}/config</directory>
+						</fileset>
+						<fileset>
+							<directory>${project.basedir}/logs</directory>
+						</fileset>
+						<fileset>
+							<directory>${project.basedir}/work</directory>
+						</fileset>
+						<fileset>
+							<directory>${project.basedir}/tmp</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>ant-sources</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<!-- 安装包之配置文件 -->
+								<copy todir="${project.build.directory}/config" overwrite="true">
+									<fileset dir="${project.basedir}/src/main/springboot-config"/>
+								</copy>
+								<copy file="${project.basedir}/src/main/${profile.id}.properties"
+									  tofile="${project.build.directory}/config/wx-demo.properties"
+									  overwrite="true"/>
+								<!-- 此步骤用于在开发环境中直接在IDEA中启动 -->
+								<copy todir="${project.basedir}/config" overwrite="true">
+									<fileset dir="${project.build.directory}/config"/>
+								</copy>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>test</id>
+			<properties>
+				<profile.id>test</profile.id>
+			</properties>
+		</profile>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<profile.id>prod</profile.id>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>
