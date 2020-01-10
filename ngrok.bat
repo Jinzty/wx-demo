@@ -1,0 +1,1 @@
+E:\soft\tool\ngrok\ngrok-stable-windows-amd64\ngrok http 8080

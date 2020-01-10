@@ -2,16 +2,15 @@ package io.jinzty.wxdemo.controller;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
+import io.jinzty.wxdemo.util.QRCodeUtils;
+import io.jinzty.wxdemo.util.WxUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,9 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -49,8 +46,13 @@ public class WxController {
             .expireAfterWrite(5, TimeUnit.MINUTES)
             //设置缓存的移除通知
             .removalListener(notification -> {
-                logger.info("", "", notification.getKey() + " " + notification.getValue() + " 被移除,原因:" + notification.getCause());
+                logger.info("缓存key:{},value:{}被移除,原因:{}", notification.getKey(), notification.getValue(), notification.getCause());
             }).build();
+
+    @Value("${wxMp.appid}")
+    private String appid;
+    @Value("${origin}")
+    private String origin;
 
     /**
      * 登录授权二维码
@@ -66,24 +68,19 @@ public class WxController {
     @ApiOperation("登录授权二维码")
     public ResponseEntity<byte[]> loginQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height,
                                               HttpSession session) throws WriterException, IOException {
-        String appid = "wx9e83c88e7e5200dc";
-        String scope = "snsapi_userinfo";//"snsapi_base";
         String uuid = RandomStringUtils.randomAlphanumeric(24);
-        String redirectUri = "https://72933770.ngrok.io/test/wx/login/callback/" + uuid;
+        String redirectUri = String.format("%s/wx/login/callback/%s", origin, uuid);
         String sessionState = "init";
-        String state = DigestUtils.md5DigestAsHex((uuid + sessionState).getBytes()).toLowerCase();
         String key = String.format("loginState_%s", uuid);
         loadingCache.put(key, sessionState);
         session.setAttribute("key", key);
         logger.info("login qrCode sessionId:{} key:{}", session.getId(), key);
-        StringBuilder sb = new StringBuilder("https://open.weixin.qq.com/connect/oauth2/authorize");
-        sb.append("?appid=").append(appid);
-        sb.append("&redirect_uri=").append(URLEncoder.encode(redirectUri, "utf-8"));
-        sb.append("&response_type=code&scope=").append(scope);
-        sb.append("&state=").append(state).append("#wechat_redirect");
+        String state = DigestUtils.md5DigestAsHex((uuid + sessionState).getBytes()).toLowerCase();
+        String authUrl = WxUtils.getMpAuthUrl(appid, redirectUri, true, state);
+        byte[] qrCode = QRCodeUtils.encode(360, 360, authUrl);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
-        return new ResponseEntity<>(getQRCodeImage(width, height, sb.toString()), headers, HttpStatus.CREATED);
+        return new ResponseEntity<>(qrCode, headers, HttpStatus.CREATED);
     }
 
     /**
@@ -156,21 +153,16 @@ public class WxController {
     @ApiOperation("user授权二维码")
     public ResponseEntity<byte[]> authQrCode(@RequestParam(defaultValue = "360") Integer width, @RequestParam(defaultValue = "360") Integer height)
             throws WriterException, IOException {
-        String appid = "wx9e83c88e7e5200dc";
-        String scope = "snsapi_userinfo";
         String uuid = RandomStringUtils.randomAlphanumeric(24);
-        String redirectUri = "https://72933770.ngrok.io/test/wx/auth/callback/" + uuid;
+        String redirectUri = String.format("%s/wx/auth/callback/%s", origin, uuid);
         String userId = "test";
-        String state = DigestUtils.md5DigestAsHex((uuid + userId).getBytes()).toLowerCase();
         loadingCache.put(String.format("auth_%s", uuid), userId);
-        StringBuilder sb = new StringBuilder("https://open.weixin.qq.com/connect/oauth2/authorize");
-        sb.append("?appid=").append(appid);
-        sb.append("&redirect_uri=").append(URLEncoder.encode(redirectUri, "utf-8"));
-        sb.append("&response_type=code&scope=").append(scope);
-        sb.append("&state=").append(state).append("#wechat_redirect");
+        String state = DigestUtils.md5DigestAsHex((uuid + userId).getBytes()).toLowerCase();
+        String authUrl = WxUtils.getMpAuthUrl(appid, redirectUri, false, state);
+        byte[] qrCode = QRCodeUtils.encode(360, 360, authUrl);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
-        return new ResponseEntity<>(getQRCodeImage(width, height, sb.toString()), headers, HttpStatus.CREATED);
+        return new ResponseEntity<>(qrCode, headers, HttpStatus.CREATED);
     }
 
     /**
@@ -215,12 +207,4 @@ public class WxController {
         return "binding";
     }
 
-    private byte[] getQRCodeImage(int width, int height, String url) throws WriterException, IOException {
-        QRCodeWriter qrCodeWriter = new QRCodeWriter();
-        BitMatrix bitMatrix = qrCodeWriter.encode(url, BarcodeFormat.QR_CODE, width, height);
-        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-        byte[] pngData = pngOutputStream.toByteArray();
-        return pngData;
-    }
 }
