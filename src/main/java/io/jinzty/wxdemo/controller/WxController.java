@@ -80,6 +80,7 @@ public class WxController {
         byte[] qrCode = QRCodeUtils.encode(360, 360, authUrl);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
+        headers.set("uuid", uuid);
         return new ResponseEntity<>(qrCode, headers, HttpStatus.CREATED);
     }
 

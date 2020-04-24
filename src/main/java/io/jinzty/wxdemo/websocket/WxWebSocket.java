@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.DigestUtils;
 
+import javax.servlet.http.HttpSession;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
@@ -21,7 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-@ServerEndpoint(value = "/wxWs")
+@ServerEndpoint(value = "/wxWs", configurator = GetHttpSessionConfigurator.class)
 @Component
 public class WxWebSocket {
     private static Logger logger = LoggerFactory.getLogger(WxWebSocket.class);
@@ -54,7 +55,9 @@ public class WxWebSocket {
     }
 
     @OnOpen
-    public void onOpen(Session session) throws IOException, WriterException {
+    public void onOpen(Session session, EndpointConfig config) throws IOException, WriterException {
+        HttpSession httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
+        logger.info("httpSessionId:{}", httpSession.getId());
         String uuid = DigestUtils.md5DigestAsHex((session.getId()).getBytes()).toLowerCase();
         logger.info("open sessionId:{}, uuid:{}", session.getId(), uuid);
         sessionMap.put(uuid, session);
