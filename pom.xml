@@ -17,7 +17,7 @@
     <properties>
         <profile.id>local</profile.id>
         <java.version>1.8</java.version>
-        <springfox-swagger.version>2.9.2</springfox-swagger.version>
+        <springfox-swagger.version>2.10.0</springfox-swagger.version>
         <guava.version>23.0</guava.version>
         <zxing.version>3.3.0</zxing.version>
     </properties>
